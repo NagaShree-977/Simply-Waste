@@ -1,0 +1,41 @@
+from flask import Flask, render_template, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///waste_market.db'
+db = SQLAlchemy(app)
+
+class Waste(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.String(50), nullable=False)  # Organic or Inorganic
+    description = db.Column(db.String(200), nullable=False)
+    price = db.Column(db.Float, nullable=False)
+    dealer_name = db.Column(db.String(100), nullable=False)
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/add_waste', methods=['POST'])
+def add_waste():
+    data = request.json
+    new_waste = Waste(
+        type=data['type'],
+        description=data['description'],
+        price=data['price'],
+        dealer_name=data['dealer_name']
+    )
+    db.session.add(new_waste)
+    db.session.commit()
+    return jsonify({'message': 'Waste added successfully!'}), 201
+
+@app.route('/get_wastes', methods=['GET'])
+def get_wastes():
+    wastes = Waste.query.all()
+    waste_list = [{'id': w.id, 'type': w.type, 'description': w.description, 'price': w.price, 'dealer_name': w.dealer_name} for w in wastes]
+    return jsonify(waste_list)
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(debug=True)
